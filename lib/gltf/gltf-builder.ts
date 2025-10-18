@@ -63,7 +63,7 @@ export class GLTFBuilder {
     this.imageDataMap = new Map()
   }
 
-  private applyGLTFOrientationFix(meshData: MeshData): MeshData {
+  private applyGLTFOrientation(meshData: MeshData): MeshData {
     const fixed: MeshData = {
       positions: [...meshData.positions],
       normals: [...meshData.normals],
@@ -226,7 +226,7 @@ export class GLTFBuilder {
         box.center,
         box.rotation,
       )
-      const gltfMeshData = this.applyGLTFOrientationFix(transformedMeshData)
+      const gltfMeshData = this.applyGLTFOrientation(transformedMeshData)
 
       const positionAccessorIndex = this.addAccessor(
         gltfMeshData.positions,
@@ -449,7 +449,7 @@ export class GLTFBuilder {
         box.center,
         box.rotation,
       )
-      const gltfMeshData = this.applyGLTFOrientationFix(transformedMeshData)
+      const gltfMeshData = this.applyGLTFOrientation(transformedMeshData)
 
       const positionAccessorIndex = this.addAccessor(
         gltfMeshData.positions,
@@ -603,7 +603,7 @@ export class GLTFBuilder {
         box.center,
         box.rotation,
       )
-      const gltfFaceData = this.applyGLTFOrientationFix(transformedFaceData)
+      const gltfFaceData = this.applyGLTFOrientation(transformedFaceData)
 
       // Create accessors for this face
       const positionAccessorIndex = this.addAccessor(
@@ -670,7 +670,7 @@ export class GLTFBuilder {
     name?: string,
   ): number {
     const meshIndex = this.meshes.length
-    const gltfMeshData = this.applyGLTFOrientationFix(meshData)
+    const gltfMeshData = this.applyGLTFOrientation(meshData)
 
     // Create accessors for vertex data
     const positionAccessorIndex = this.addAccessor(
