@@ -63,6 +63,35 @@ export class GLTFBuilder {
     this.imageDataMap = new Map()
   }
 
+  private applyGLTFOrientationFix(meshData: MeshData): MeshData {
+    const fixed: MeshData = {
+      positions: [...meshData.positions],
+      normals: [...meshData.normals],
+      texcoords: [...meshData.texcoords],
+      indices: [...meshData.indices],
+    }
+
+    if (meshData.colors) {
+      fixed.colors = [...meshData.colors]
+    }
+
+    for (let i = 0; i < fixed.positions.length; i += 3) {
+      fixed.positions[i] = -fixed.positions[i]!
+    }
+
+    for (let i = 0; i < fixed.normals.length; i += 3) {
+      fixed.normals[i] = -fixed.normals[i]!
+    }
+
+    for (let i = 0; i < fixed.indices.length; i += 3) {
+      const temp = fixed.indices[i + 1]!
+      fixed.indices[i + 1] = fixed.indices[i + 2]!
+      fixed.indices[i + 2] = temp
+    }
+
+    return fixed
+  }
+
   async buildFromScene3D(scene3D: Scene3D): Promise<void> {
     // Add default material
     const defaultMaterialIndex = this.addMaterial({
@@ -197,30 +226,31 @@ export class GLTFBuilder {
         box.center,
         box.rotation,
       )
+      const gltfMeshData = this.applyGLTFOrientationFix(transformedMeshData)
 
       const positionAccessorIndex = this.addAccessor(
-        transformedMeshData.positions,
+        gltfMeshData.positions,
         "VEC3",
         COMPONENT_TYPE.FLOAT,
         TARGET.ARRAY_BUFFER,
       )
 
       const normalAccessorIndex = this.addAccessor(
-        transformedMeshData.normals,
+        gltfMeshData.normals,
         "VEC3",
         COMPONENT_TYPE.FLOAT,
         TARGET.ARRAY_BUFFER,
       )
 
       const texcoordAccessorIndex = this.addAccessor(
-        transformedMeshData.texcoords,
+        gltfMeshData.texcoords,
         "VEC2",
         COMPONENT_TYPE.FLOAT,
         TARGET.ARRAY_BUFFER,
       )
 
       const indicesAccessorIndex = this.addAccessor(
-        transformedMeshData.indices,
+        gltfMeshData.indices,
         "SCALAR",
         COMPONENT_TYPE.UNSIGNED_SHORT,
         TARGET.ELEMENT_ARRAY_BUFFER,
@@ -419,30 +449,31 @@ export class GLTFBuilder {
         box.center,
         box.rotation,
       )
+      const gltfMeshData = this.applyGLTFOrientationFix(transformedMeshData)
 
       const positionAccessorIndex = this.addAccessor(
-        transformedMeshData.positions,
+        gltfMeshData.positions,
         "VEC3",
         COMPONENT_TYPE.FLOAT,
         TARGET.ARRAY_BUFFER,
       )
 
       const normalAccessorIndex = this.addAccessor(
-        transformedMeshData.normals,
+        gltfMeshData.normals,
         "VEC3",
         COMPONENT_TYPE.FLOAT,
         TARGET.ARRAY_BUFFER,
       )
 
       const texcoordAccessorIndex = this.addAccessor(
-        transformedMeshData.texcoords,
+        gltfMeshData.texcoords,
         "VEC2",
         COMPONENT_TYPE.FLOAT,
         TARGET.ARRAY_BUFFER,
       )
 
       const indicesAccessorIndex = this.addAccessor(
-        transformedMeshData.indices,
+        gltfMeshData.indices,
         "SCALAR",
         COMPONENT_TYPE.UNSIGNED_SHORT,
         TARGET.ELEMENT_ARRAY_BUFFER,
@@ -572,31 +603,32 @@ export class GLTFBuilder {
         box.center,
         box.rotation,
       )
+      const gltfFaceData = this.applyGLTFOrientationFix(transformedFaceData)
 
       // Create accessors for this face
       const positionAccessorIndex = this.addAccessor(
-        transformedFaceData.positions,
+        gltfFaceData.positions,
         "VEC3",
         COMPONENT_TYPE.FLOAT,
         TARGET.ARRAY_BUFFER,
       )
 
       const normalAccessorIndex = this.addAccessor(
-        transformedFaceData.normals,
+        gltfFaceData.normals,
         "VEC3",
         COMPONENT_TYPE.FLOAT,
         TARGET.ARRAY_BUFFER,
       )
 
       const texcoordAccessorIndex = this.addAccessor(
-        transformedFaceData.texcoords,
+        gltfFaceData.texcoords,
         "VEC2",
         COMPONENT_TYPE.FLOAT,
         TARGET.ARRAY_BUFFER,
       )
 
       const indicesAccessorIndex = this.addAccessor(
-        transformedFaceData.indices,
+        gltfFaceData.indices,
         "SCALAR",
         COMPONENT_TYPE.UNSIGNED_SHORT,
         TARGET.ELEMENT_ARRAY_BUFFER,
@@ -638,31 +670,32 @@ export class GLTFBuilder {
     name?: string,
   ): number {
     const meshIndex = this.meshes.length
+    const gltfMeshData = this.applyGLTFOrientationFix(meshData)
 
     // Create accessors for vertex data
     const positionAccessorIndex = this.addAccessor(
-      meshData.positions,
+      gltfMeshData.positions,
       "VEC3",
       COMPONENT_TYPE.FLOAT,
       TARGET.ARRAY_BUFFER,
     )
 
     const normalAccessorIndex = this.addAccessor(
-      meshData.normals,
+      gltfMeshData.normals,
       "VEC3",
       COMPONENT_TYPE.FLOAT,
       TARGET.ARRAY_BUFFER,
     )
 
     const texcoordAccessorIndex = this.addAccessor(
-      meshData.texcoords,
+      gltfMeshData.texcoords,
       "VEC2",
       COMPONENT_TYPE.FLOAT,
       TARGET.ARRAY_BUFFER,
     )
 
     const indicesAccessorIndex = this.addAccessor(
-      meshData.indices,
+      gltfMeshData.indices,
       "SCALAR",
       COMPONENT_TYPE.UNSIGNED_SHORT,
       TARGET.ELEMENT_ARRAY_BUFFER,
