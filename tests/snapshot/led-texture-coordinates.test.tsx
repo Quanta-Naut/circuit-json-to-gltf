@@ -1,7 +1,7 @@
 import { Circuit } from "tscircuit"
 import { test, expect } from "bun:test"
-import { convertCircuitJsonToGltf } from "../../../lib"
-import { getBestCameraPosition } from "../../../lib/utils/camera-position"
+import { convertCircuitJsonToGltf } from "../../lib"
+import { getBestCameraPosition } from "../../lib/utils/camera-position"
 import { renderGLTFToPNGBufferFromGLBBuffer } from "poppygl"
 
 test("led-texture-coordinates-snapshot", async () => {
