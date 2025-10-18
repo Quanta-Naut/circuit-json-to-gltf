@@ -18,7 +18,7 @@ test("led-texture-coordinates-snapshot", async () => {
   // Convert circuit to GLTF (GLB format for rendering)
   const glbResult = await convertCircuitJsonToGltf(circuitJson, {
     format: "glb",
-    boardTextureResolution: 1024,
+    boardTextureResolution: 2048,
     includeModels: true,
     showBoundingBoxes: false,
   })
