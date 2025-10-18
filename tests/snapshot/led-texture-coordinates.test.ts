@@ -28,9 +28,7 @@ test("led-texture-coordinates-snapshot", async () => {
   expect((glbResult as ArrayBuffer).byteLength).toBeGreaterThan(0)
 
   // Render the GLB to PNG with camera position derived from circuit dimensions
-  let cameraOptions = getBestCameraPosition(circuitJson)
-  cameraOptions.camPos = [6, 14, 8]
-  cameraOptions.lookAt = [-4, -4, 1]
+    let cameraOptions = getBestCameraPosition(circuitJson);
 
   expect(
     renderGLTFToPNGBufferFromGLBBuffer(glbResult as ArrayBuffer, cameraOptions),
