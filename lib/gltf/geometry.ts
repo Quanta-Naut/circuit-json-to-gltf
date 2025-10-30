@@ -418,19 +418,23 @@ export function transformMesh(
     }
 
     // Apply translation
-    result.positions[i] = x + translation.x
-    result.positions[i + 1] = y + translation.y
-    result.positions[i + 2] = z + translation.z
+    x += translation.x
+    y += translation.y
+    z += translation.z
+
+    result.positions[i] = -x
+    result.positions[i + 1] = y
+    result.positions[i + 2] = z
   }
 
-  // Also transform normals if there was rotation
-  if (rotation) {
-    for (let i = 0; i < result.normals.length; i += 3) {
-      let nx = result.normals[i]!
-      let ny = result.normals[i + 1]!
-      let nz = result.normals[i + 2]!
+  // Transform normals with rotation and GLTF orientation fix
+  for (let i = 0; i < result.normals.length; i += 3) {
+    let nx = result.normals[i]!
+    let ny = result.normals[i + 1]!
+    let nz = result.normals[i + 2]!
 
-      // Apply same rotations to normals
+    // Apply same rotations to normals if there was rotation
+    if (rotation) {
       // Rotation around Y axis
       const cosY = Math.cos(rotation.y)
       const sinY = Math.sin(rotation.y)
@@ -454,11 +458,17 @@ export function transformMesh(
       const rny2 = nx * sinZ + ny * cosZ
       nx = rnx2
       ny = rny2
-
-      result.normals[i] = nx
-      result.normals[i + 1] = ny
-      result.normals[i + 2] = nz
     }
+
+    result.normals[i] = -nx
+    result.normals[i + 1] = ny
+    result.normals[i + 2] = nz
+  }
+
+  for (let i = 0; i < result.indices.length; i += 3) {
+    const temp = result.indices[i + 1]!
+    result.indices[i + 1] = result.indices[i + 2]!
+    result.indices[i + 2] = temp
   }
 
   return result
