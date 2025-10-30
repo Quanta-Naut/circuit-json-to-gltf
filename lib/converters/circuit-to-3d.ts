@@ -49,6 +49,7 @@ export async function convertCircuitJsonTo3D(
     renderBoardTextures: shouldRenderTextures = true,
     textureResolution = 1024,
     coordinateTransform,
+    showBoundingBoxes = true,
   } = options
 
   const db: any = cju(circuitJson)
@@ -164,15 +165,13 @@ export async function convertCircuitJsonTo3D(
     const center = cad.position
       ? {
           x: cad.position.x,
-          y: isBottomLayer
-            ? -Math.abs(cad.position.z) // Ensure negative Y for bottom layer
-            : cad.position.z,
+          y: cad.position.z,
           z: cad.position.y,
         }
       : {
           x: pcbComponent?.center.x ?? 0,
           y: isBottomLayer
-            ? -(effectiveBoardThickness + size.y / 2)
+            ? -(effectiveBoardThickness / 2 + size.y / 2)
             : effectiveBoardThickness / 2 + size.y / 2,
           z: pcbComponent?.center.y ?? 0,
         }
@@ -204,27 +203,18 @@ export async function convertCircuitJsonTo3D(
       // For GLB/GLTF models, we need to remap rotation axes because the coordinate
       // system has Y and Z swapped. Circuit JSON uses Z-up, but the transformed
       // model uses Y-up.
-      if (model_glb_url || model_gltf_url || hasFootprinterModel) {
-        // Remap rotation: circuit Z -> model Y, circuit Y -> model Z
-        box.rotation = convertRotationFromCadRotation({
-          x: isBottomLayer ? cad.rotation.x + 180 : cad.rotation.x,
-          y: cad.rotation.z, // Circuit Z rotation becomes model Y rotation
-          z: cad.rotation.y, // Circuit Y rotation becomes model Z rotation
-        })
-      } else {
-        box.rotation = convertRotationFromCadRotation({
-          x: isBottomLayer ? cad.rotation.x + 180 : cad.rotation.x,
-          y: cad.rotation.y,
-          z: cad.rotation.z,
-        })
-      }
+      box.rotation = convertRotationFromCadRotation({
+        x: cad.rotation.x,
+        y: cad.rotation.z, // Circuit Z rotation becomes model Y rotation
+        z: cad.rotation.y, // Circuit Y rotation becomes model Z rotation
+      })
     } else if (isBottomLayer) {
       // If no rotation specified but component is on bottom, flip it
       if (model_glb_url || model_gltf_url || hasFootprinterModel) {
         box.rotation = convertRotationFromCadRotation({
-          x: 180,
+          x: 0,
           y: 0,
-          z: 0,
+          z: 180, // Flip via Z rotation for GLB models (matches circuit JSON convention)
         })
       } else {
         box.rotation = convertRotationFromCadRotation({
@@ -237,8 +227,12 @@ export async function convertCircuitJsonTo3D(
 
     // Try to load the mesh with default coordinate transform if none specified
     // Note: GLB loader handles its own default Y/Z swap, so we pass through coordinateTransform
-    // STL/OBJ files need Z-up to Y-up conversion
+    // Different model formats use different coordinate conventions:
+    // - OBJ models typically have Z-up with origin at the bottom
+    // - STL models vary widely
+    // - GLB/GLTF have their own conventions
     const usingGlbCoordinates = Boolean(model_glb_url || model_gltf_url)
+    const usingObjFormat = Boolean(model_obj_url)
 
     const defaultTransform =
       coordinateTransform ??
@@ -246,7 +240,9 @@ export async function convertCircuitJsonTo3D(
         ? undefined // GLB loader has its own default transform
         : hasFootprinterModel
           ? COORDINATE_TRANSFORMS.FOOTPRINTER_MODEL_TRANSFORM
-          : COORDINATE_TRANSFORMS.Z_UP_TO_Y_UP_USB_FIX)
+          : usingObjFormat
+            ? COORDINATE_TRANSFORMS.OBJ_Z_UP_TO_Y_UP
+            : COORDINATE_TRANSFORMS.Z_UP_TO_Y_UP_USB_FIX)
 
     if (model_stl_url) {
       box.mesh = await loadSTL(model_stl_url, defaultTransform)
@@ -267,6 +263,16 @@ export async function convertCircuitJsonTo3D(
       box.mesh = scaleMesh(box.mesh, modelScaleFactor)
     }
 
+    // Adjust position if mesh was loaded and position was explicitly set
+    // OBJ models typically have their origin at the bottom, so when position.z is specified,
+    // it should be treated as the bottom of the component rather than the center
+    if (box.mesh && cad.position && usingObjFormat) {
+      const meshBottom = box.mesh.boundingBox.min.y
+      // Adjust center Y so that (center.y + meshBottom) equals the intended position
+      // This makes the bottom of the mesh align with position.z
+      box.center.y -= meshBottom
+    }
+
     // Only set color if mesh loading failed (fallback to simple box)
     if (!box.mesh) {
       box.color = componentColor
@@ -275,38 +281,40 @@ export async function convertCircuitJsonTo3D(
     boxes.push(box)
   }
 
-  // Add generic boxes for components without 3D models
-  for (const component of db.pcb_component.list()) {
-    if (pcbComponentIdsWith3D.has(component.pcb_component_id)) continue
+  // Add generic boxes for components without 3D models (only if showBoundingBoxes is true)
+  if (showBoundingBoxes) {
+    for (const component of db.pcb_component.list()) {
+      if (pcbComponentIdsWith3D.has(component.pcb_component_id)) continue
 
-    const sourceComponent = db.source_component.get(
-      component.source_component_id,
-    )
-    const compHeight = Math.min(
-      Math.min(component.width, component.height),
-      defaultComponentHeight,
-    )
+      const sourceComponent = db.source_component.get(
+        component.source_component_id,
+      )
+      const compHeight = Math.min(
+        Math.min(component.width, component.height),
+        defaultComponentHeight,
+      )
 
-    // Check if component is on bottom layer
-    const isBottomLayer = component.layer === "bottom"
+      // Check if component is on bottom layer
+      const isBottomLayer = component.layer === "bottom"
 
-    boxes.push({
-      center: {
-        x: component.center.x,
-        y: isBottomLayer
-          ? -(effectiveBoardThickness + compHeight / 2)
-          : effectiveBoardThickness / 2 + compHeight / 2,
-        z: component.center.y,
-      },
-      size: {
-        x: component.width,
-        y: compHeight,
-        z: component.height,
-      },
-      color: componentColor,
-      label: sourceComponent?.name ?? "?",
-      labelColor: "white",
-    })
+      boxes.push({
+        center: {
+          x: component.center.x,
+          y: isBottomLayer
+            ? -(effectiveBoardThickness + compHeight / 2)
+            : effectiveBoardThickness / 2 + compHeight / 2,
+          z: component.center.y,
+        },
+        size: {
+          x: component.width,
+          y: compHeight,
+          z: component.height,
+        },
+        color: componentColor,
+        label: sourceComponent?.name ?? "?",
+        labelColor: "white",
+      })
+    }
   }
 
   // Create a default camera positioned to view the board or components

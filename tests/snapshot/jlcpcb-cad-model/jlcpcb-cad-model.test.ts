@@ -1,15 +1,16 @@
 import { test, expect } from "bun:test"
 import { renderGLTFToPNGBufferFromGLBBuffer } from "poppygl"
-import { convertCircuitJsonToGltf } from "../../lib/index"
-import { getBestCameraPosition } from "../../lib/utils/camera-position"
+import { convertCircuitJsonToGltf } from "../../../lib/index"
+import { getBestCameraPosition } from "../../../lib/utils/camera-position"
 import type { CircuitJson } from "circuit-json"
 import * as fs from "node:fs"
 import * as path from "node:path"
 
-test("esp32-board-pcb-snapshot", async () => {
-  const esp32BoardPath = path.join(__dirname, "../fixtures/esp32-board.json")
+test("jlcpcb-cad-model-pcb-snapshot", async () => {
+  // Load the JLCPCB CAD model circuit JSON
+  const jlcpcbCadModelPath = path.join(__dirname, "jlcpcb-cad-model.json")
 
-  const circuitData = fs.readFileSync(esp32BoardPath, "utf-8")
+  const circuitData = fs.readFileSync(jlcpcbCadModelPath, "utf-8")
   const circuitJson: CircuitJson = JSON.parse(circuitData)
 
   // Convert circuit to GLTF (GLB format for rendering)
@@ -17,8 +18,11 @@ test("esp32-board-pcb-snapshot", async () => {
     format: "glb",
     boardTextureResolution: 1024,
     includeModels: true,
-    showBoundingBoxes: true,
+    showBoundingBoxes: false,
+    backgroundColor: "#000000",
   })
+
+  // Bun.write("jlcpcb-cad-model.glb", Buffer.from(glbResult as ArrayBuffer))
 
   // Ensure we got a valid GLB buffer
   expect(glbResult).toBeInstanceOf(ArrayBuffer)
@@ -29,5 +33,5 @@ test("esp32-board-pcb-snapshot", async () => {
 
   expect(
     renderGLTFToPNGBufferFromGLBBuffer(glbResult as ArrayBuffer, cameraOptions),
-  ).toMatchPngSnapshot(import.meta.path, "esp32-board")
+  ).toMatchPngSnapshot(import.meta.path)
 })
